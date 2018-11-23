@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#define MY_PORT 3030
+#define MY_PORT 43134
 #define BACKLOG 10
 
 int main() {
@@ -16,6 +16,7 @@ int main() {
 	int receiveSockFd;
 	struct sockaddr_in myAddr;
 	struct sockaddr_in theirAddr;
+	char message[6] = "Hello";
 	unsigned int sin_size;
 
 	/**
@@ -58,5 +59,10 @@ int main() {
 			continue;
 		}
 		printf("Server : got connection from %s\n", inet_ntoa(theirAddr.sin_addr));
+		if(sendto(sockfd, message, strlen(message), 0,
+				  (struct sockaddr *)&receiveSockFd, sizeof(receiveSockFd)) == -1)
+		{
+			perror("Failed to send to");
+		}
 	}
 }
