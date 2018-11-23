@@ -1,0 +1,8 @@
+# Clion
+.idea/
+cmake-build-debug/
+CMakeLists.txt
+
+# Binary
+a.out
+*.bin
