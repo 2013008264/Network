@@ -8,16 +8,18 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#define MY_PORT 43134
+#define PORT 43134
+#define BUF_SIZE 1024
 #define BACKLOG 10
 
 int main() {
-	int sockfd; // socket file descriptor.
-	int receiveSockFd;
-	struct sockaddr_in myAddr;
-	struct sockaddr_in theirAddr;
-	char message[6] = "Hello";
-	unsigned int sin_size;
+	int server_fd; // socket file descriptor.
+	int new_socket, valread;
+	struct sockaddr_in address;
+	int opt = 1;
+	int addrlen = sizeof(address);
+	char buffer[BUF_SIZE] = {0};
+	char * hello = "Hello from server";
 
 	/**
 	 * Make UDP Socket
@@ -29,40 +31,42 @@ int main() {
 	 * SOCK_STREAM : Using TCP
 	 * SOCK_DGRAM : Using UDP.
 	 **/
-	if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("Failed to make socket");
-		return 1;
-	}
+	 if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+	 	perror("Failed to make socket");
+	 	return -1;
+	 }
 
-	myAddr.sin_family = AF_INET; // Address family of internet.
+	 if(setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt))) {
+	 	perror("Failed to set socket");
+	 	return -1;
+	 }
+
+	address.sin_family = AF_INET; // Address family of internet.
 	// htons == host to network short
-	myAddr.sin_port = htons(MY_PORT);
+	address.sin_port = htons(PORT);
 	// htonl == host to network long
-	myAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	address.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	// Binding socket addr.
-	if(bind(sockfd, (struct sockaddr *)&myAddr, sizeof(struct sockaddr)) == -1) {
+	if(bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
 		perror("Failed to bind socket");
 		return 1;
 	}
 
 	// Wait listen.
-	if(listen(sockfd, BACKLOG) == -1) {
+	if(listen(server_fd, BACKLOG) == -1) {
 		perror("Failed to listen");
 		exit(1);
 	}
 
 	while(1) {
-		sin_size = sizeof(struct sockaddr_in);
-		if((receiveSockFd = accept(sockfd, (struct sockaddr *)&theirAddr, &sin_size)) == -1) {
+		if((new_socket = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen)) < 0) {
 			perror("Failed to accept");
-			continue;
+			return -1;
 		}
-		printf("Server : got connection from %s\n", inet_ntoa(theirAddr.sin_addr));
-		if(sendto(sockfd, message, strlen(message), 0,
-				  (struct sockaddr *)&receiveSockFd, sizeof(receiveSockFd)) == -1)
-		{
-			perror("Failed to send to");
-		}
+		valread = (int)recv(new_socket, buffer, BUF_SIZE, 0);
+		printf("%s\n", buffer);
+		send(new_socket, hello, strlen(hello), 0);
+		printf("Hello message sent\n");
 	}
 }
